@@ -17,6 +17,10 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer = HTTPBearer(auto_error=False)
 
 def hash_password(password: str) -> str:
+    # bcrypt only accepts up to 72 UTF-8 bytes. Keep the demo API from crashing.
+    password_bytes = password.encode("utf-8")
+    if len(password_bytes) > 72:
+        raise ValueError("Password must be 72 bytes or fewer")
     return pwd_context.hash(password)
 
 def verify_password(password: str, password_hash: str) -> bool:
