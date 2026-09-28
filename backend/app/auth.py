@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from sqlalchemy.orm import Session
 
 from .database import get_db
@@ -13,7 +13,6 @@ from .models import User
 SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_MINUTES = 60 * 24
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer = HTTPBearer(auto_error=False)
 
 def hash_password(password: str) -> str:
@@ -21,10 +20,10 @@ def hash_password(password: str) -> str:
     password_bytes = password.encode("utf-8")
     if len(password_bytes) > 72:
         raise ValueError("Password must be 72 bytes or fewer")
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 def verify_password(password: str, password_hash: str) -> bool:
-    return pwd_context.verify(password, password_hash)
+    return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
 
 def create_access_token(user_id: int) -> str:
     expires = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_MINUTES)
