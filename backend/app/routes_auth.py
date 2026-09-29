@@ -1,10 +1,11 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from .auth import create_access_token, get_current_user, hash_password, verify_password
 from .database import get_db
 from .models import User, UserRole
-from .schemas import Token, UserCreate, UserLogin, UserOut
+from .schemas import AdminCreate, Token, UserCreate, UserLogin, UserOut
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -22,6 +23,19 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
         password_hash=hash_password(data.password),
         role=UserRole.STUDENT.value,
     )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return Token(access_token=create_access_token(user.id), user=user)
+
+@router.post("/admin/register", response_model=Token)
+def register_admin(data: AdminCreate, db: Session = Depends(get_db)):
+    setup_key = os.getenv("ADMIN_SETUP_KEY")
+    if not setup_key or data.setup_key != setup_key:
+        raise HTTPException(status_code=403, detail="Invalid admin setup key")
+    if db.query(User).filter(User.email == data.email).first():
+        raise HTTPException(status_code=409, detail="Email already registered")
+    user = User(name=data.name, email=data.email, password_hash=hash_password(data.password), role=UserRole.ADMIN.value)
     db.add(user)
     db.commit()
     db.refresh(user)
