@@ -8,6 +8,12 @@ class UserCreate(BaseModel):
     student_id: str | None = None
     department: str | None = None
 
+class AdminCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    email: EmailStr
+    password: str = Field(min_length=6, max_length=72)
+    setup_key: str = Field(min_length=1)
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
